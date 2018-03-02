@@ -1,0 +1,429 @@
+---
+title: 'Intro to Data Science in R: Harvard Medical School MMSCI CI708'
+author: "Sarah McGough"
+date: "7/24/2017"
+output: github_document
+---
+**Goal:** We will learn how to transform a messy dataset in R into a clean, ready-for-analysis version
+
+##Loading and Inspecting the Data
+
+In order to open and use data files in R, you must specify a “working directory,” a folder on your computer where you will extract and store your data. You should set the working directory to be the location of your data files of interest. You would do this by typing setwd(“file path name here in quotes”). For example:
+
+```{r}
+setwd("/Users/sarah/Intro to Data Science Tutorials/")
+```
+
+A way to manually set the working directory, if you do not know the file path off-hand, is to go to the menu bar of R Studio and click Session  Set Working Directory  Choose Directory, and there you will be able to choose the appropriate folder by navigating manually on your computer. 
+
+At any moment, you can ask R to tell you what your current working directory is set to by typing:
+```{r eval=F}
+getwd()
+```
+
+Note that in R, capitalization is important; any command that you write must have the proper capitalization – generally, base R commands like *getwd()* are lower case. However, if you create a variable that has a capital letter, you will not be able to call it on R unless it is spelled with the same capitalization. 
+
+Now that we have set the working directory, we can load our data. Today, we will be working with CSV files, which you can read into R with the command *read.csv(“name of file.csv”)*. If you have set your working directory to a folder that does not contain this CSV file, you will get an error message from R. 
+
+We will load the data into our R workspace by assigning the dataset a name that we can easily call in R, like “sample_data.” We assign things in R using the **arrow <-** symbol. By reading in the data, we have created an object in R called a data frame. There can be other types of objects in R, i.e. a list or a matrix. 
+
+```{r}
+sample_data <- read.csv("sample_data.csv")
+```
+
+R is an open-source programming language, which means that users can freely write packages that contain commands and functions that provide shortcuts or complex methods that you can employ on your own data in R. Today, we will work with one such package called dplyr, which is cherished by R users for its magical data wrangling shortcuts.
+
+In order to load the dplyr package, you must install it first:
+
+```{r,eval=F}
+install.packages("dplyr")
+```
+
+And then load the package into your R workspace:
+
+```{r}
+library(dplyr)
+```
+
+##Part 1: R Basics – Inspecting and Cleaning Data
+
+###1a. Inspect the data
+
+Let’s take a look at the full dataset. We can do this in a separate window in R Studio with
+
+```{r, eval=F}
+View(sample_data)
+```
+
+If we want to look at the data in our current console, we can type
+
+```{r, eval=F}
+sample_data
+```
+
+This will output the entire dataset in the R console. This usually isn’t practical for massive datasets, so we can instead inspect the first few lines of the dataset by typing
+
+```{r}
+head(sample_data)
+head(sample_data, 6)
+sample_data[1:6,]
+```
+
+Notice anything? These all give the same results! The command *head(sample_data)* is an R shortcut that, by default (i.e. without specifying anything else), will output the first 6 lines of the data frame that you specify. That is why it’s the same command as *head(sample_data, 6)*; the *( , NUMBER)* says that you want to see the first *N* lines of the data frame.  
+
+The last command utilizes the traditional R syntax of a data frame object in R, which is **[Row, Column]**. When you type *sample_data[1:6,]*, you are telling R that you want to see the first 6 rows (1:6, or 1 through 6) of the data, and ALL of the columns, since you have left everything to the right of the comma blank. 
+
+**Review: What command would you type to see the first 20 rows of the data? To see only the second column? To see the first 6 rows and the first 3 columns?**
+
+If we want to check out the number of rows and columns in our data frame, we can simply ask R to give us the dimensions by:
+
+```{r}
+dim(sample_data)
+```
+which tells us that we have 60 observations (rows) and 14 variables (columns). 
+
+As we can see from our data inspection, each variable in the data is its own column, and each row is an observation. With a careful look, we can tell that each observation is an individual person, identified with a unique ID number; the same person appears multiple times in the dataset because this is clinical data that contains multiple follow-up visits per individual. Here is the full list of variables:
+
+* Variable name in dataset
+
+* Variable Description
+
+* id
+
+* Unique worker identifier
+
+* visit_number
+
+* Visit to registry number
+
+* visit_date
+
+* Date of registry visit
+
+* back_pain
+
+* Presence of back pain (Yes/No)
+
+* back_pain_date
+
+* Date of reported back pain 
+
+* gi_bleed_outcome
+
+* Presence of gastrointestinal bleeding outcome (Yes/No) (outcome)
+
+* gi_bleed_date
+
+* Date of gastrointestinal bleeding outcome
+
+* medication_analgesic
+
+* Reported use of analgesic medication (exposure)
+
+* analgesic_start_date
+
+* Date of analgesic prescription fill
+
+* medication_warfarin
+
+* Reported use of warfarin
+
+* warfarin_start_date
+
+* Date of warfarin prescription fill
+
+* age
+
+* Age in years at cohort entry
+
+* sex
+
+* Sex (male/female)
+
+* race
+
+* Race (white, black, other)
+ 
+To examine and verify the names of the variables, we can take a look at the names of the columns in our data frame:
+```{r}
+names(sample_data)
+```
+
+Without using the [,] syntax from earlier, we can also call individual columns using the column names and the $ operator:
+
+```{r}
+sample_data$visit_date
+```
+
+You can only call one column at a time using this command; if you want to call multiple columns, you would use the [,] syntax. 
+
+### 1b. Clean the data: Missing variables
+
+From our data inspection, it looks like there are a lot of missing (“NA”) values in the data. How many?
+
+```{r, tidy=T}
+sum(is.na(sample_data))
+```
+
+That’s a lot! The command *is.na* returns a logical vector that marks TRUE for every element that meets the criteria, and FALSE for every element that does not. In other words, it asks: Is this observation missing a value? We can perform a mathematical operation, such as *sum()*, in order to add up the total number of missing elements across all of the variables.  To see the logical output, try on its own:
+
+```{r}
+is.na(sample_data)
+```
+
+Sometimes, it's desirable to filter out any observation that has any NA (missing) value. You would do this by writing
+
+```{r}
+na.omit(sample_data)
+```
+which omits all NA’s from the data,
+
+or
+```{r}
+sample_data[complete.cases(sample_data),]	
+```
+
+which returns only “complete cases,” in other words only those observations that have non-missing values for every variable. 
+
+However, as we can see, doing this would erase all observations in the data. In other words, in this dataset, no single observation has complete information for all variables. In this case, we would like to instead strategically remove missing data specific to the purposes of our analysis. 
+
+Say we want to analyze analgesic medication use over time. This requires us to have information on analgesic use as well as the start date of use (in order to keep track of use over time). 
+
+How many observations are missing for these specific variables? 
+```{r}
+sum(is.na(sample_data$medication_analgesic))
+sum(is.na(sample_data$analgesic_start_date))
+```
+
+Interesting. Are the observations that lack a value for medication_analgesic ALSO missing a value for analgesic_start_date?
+
+```{r}
+sample_data[is.na(sample_data$analgesic_start_date) & is.na(sample_data$medication_analgesic),]
+```
+
+What this command does is take our data frame, sample_data, and tell R to show us all of the rows that are missing BOTH variables (because we have specified the & sign). R outputs all columns regardless. Can you see how the syntax within the brackets [,] does this? It makes sense that observations with a missing value for medication_analgesic are also missing a value for analgesic_start_date (why?). 
+
+Do any observations have a start date reported for analgesic use but NO analgesic type reported? This would be problematic if so. The Boolean operator NOT is signified by !
+
+```{r}
+sample_data[!is.na(sample_data$analgesic_start_date) & is.na(sample_data$medication_analgesic),]
+```
+
+Good! There are no observations that meet that criteria. We would be worried if so.
+
+For the purposes of analysis, we care about observations that have reported analgesic use but that are missing the start date. 
+
+```{r}
+sample_data[is.na(sample_data$analgesic_start_date) & !is.na(sample_data$medication_analgesic),]
+```
+
+It looks like one observation is missing the start date for analgesic use. Let's isolate this observation and save it to our workspace as missing_date:
+
+```{r}
+missing_date <- sample_data[is.na(sample_data$analgesic_start_date) & !is.na(sample_data$medication_analgesic),]
+
+missing_date
+```
+
+We now see that person with ID #7 is an issue because we don't have the start date for the medication use, and therefore cannot use this person in our analysis, which requires us to have time stamps reported for each follow-up visit.
+
+Consequently, let's remove person #7 from our full dataset. There are several ways to do this, and all give the exact same result. 
+
+###Dplyr data manipulation:
+
+In each example, we will employ our first use of the (magical) dplyr package, which gives us the useful %>% operator called the pipe. The pipe will often save your life (and time) and act as a shortcut to many data manipulation commands.
+
+To understand the pipe, think of it as a grammatical element of a sentence that means “and then do”. It is followed by command “verbs” that allow quick execution of many tasks. The “verbs” that we will see in this tutorial are filter, select, and summarise. 
+
+**Example 1:** To filter out person #7, we would use the %>% to tell R: take the sample_data data frame and then filter out ID #7. The Boolean operator ! reads “take all observations that do NOT have an ID number equal to 7.”
+
+```{r}
+sample_data_v1 <- sample_data %>% filter(id!=7)
+dim(sample_data_v1)
+nrow(sample_data_v1)
+```
+
+**Example 2:** We could also use the %>% to tell R: take the sample_data data frame and then filter out the observation that has an ID in the missing_date frame. This uses another similar dplyr operation, %in%. 
+
+```{r}
+sample_data_v2 <- sample_data %>% filter(!(id %in% missing_date$id))
+dim(sample_data_v2)
+nrow(sample_data_v2)
+```
+
+**Example 3:** Using the syntax of [Row,Column], we could perform the same operation without %>%. This tells R: take the sample_data data frame and give us the rows that do NOT (!) have an ID number that is found in the missing_date frame. 
+
+```{r}
+sample_data_v3 <- sample_data[!(sample_data$id %in% missing_date$id),]
+dim(sample_data_v3)
+nrow(sample_data_v3)
+```
+
+**Example 4:** Using the syntax of [Row,Column], but without referencing missing_date, we could simply tell R to give us all the rows that don’t have ID #7.
+
+```{r}
+sample_data_v4 <- sample_data[!(sample_data$id==7),]
+dim(sample_data_v4)
+nrow(sample_data_v4)
+```
+
+Note: The double equals sign (==) is code for “is equal to.” Using a single equals sign (=) is the equivalent of the <- arrow to assign values. The negative (!=) is code for “is NOT equal to.” 
+
+It's good practice to keep the original dataset (sample_data) in your R workspace, and create a new dataset after filtering and/or subsetting the data. We will simply assign a new name to one of the 4 practice examples we created above. It doesn't matter which example you choose to save, since they all give the same result.
+
+```{r}
+sample_data_2 <- sample_data_v1
+```
+
+Let's remove the 4 practice examples from our workspace so that we don't get confused 
+```{r}
+rm(sample_data_v1, sample_data_v2, sample_data_v3, sample_data_v4)
+```
+
+Now let's double-check that we have truly removed worker #7 for our data by "searching" for that worker in our new dataset
+
+```{r}
+sample_data_2$id==7 		#tells us True or False: ID is equal to 7?
+sum(sample_data_2$id==7) 	 #tells us how many observations have ID equal to 7
+sample_data_2 %>% filter(id==7) 	#gives us all the observations with ID equal to 7
+sum(is.na(sample_data_2$analgesic_start_date) & !is.na(sample_data_2$medication_analgesic)) # any missing?
+```
+
+We have successfully resolved our missing data issue. If the analgesic use variable is not missing, there are no missing values for the medication use start date.
+
+###1c. Clean the data: Outliers
+
+Now we have verified that we removed the missing values of interest from our data. In addition to missingness, another feature of the data that we care about is outliers. Let's check out the summary statistics to inspect for outliers on a continuous variable, age. We will call the age column using the $ operator. What do you suspect?
+
+```{r}
+mean(sample_data_2$age)
+median(sample_data_2$age)
+max(sample_data_2$age)
+min(sample_data_2$age)
+```
+
+We can also plot a histogram to look at the distribution of this continuous variable and visually inspect for outliers.
+
+```{r}
+hist(sample_data_2$age)
+```
+
+In the future, we'll work with a package called ggplot2 to do this, too:
+```{r}
+library(ggplot2)
+ggplot(sample_data_2,aes(age)) + geom_histogram()
+```
+
+
+What observation(s) have such a low age? We can examine the data many different ways:
+
+```{r}
+sort(sample_data_2$age) # sorts the age in an ascending order
+sample_data_2[order(sample_data_2$age),] # orders the data from low to high age
+sample_data_2 %>% filter(age<20)  # filters the data to ages lower than 20
+sample_data_2[sample_data_2$age<20,] # is the equivalent using [row,column] syntax
+```
+
+We see that ID #1 is the problem. We assume that this is a data entry mistake. We can remove the low age, or we can impute a new age based on reported characteristics: sex, race. Here, we will compute the mean age of the other white females in the data, and use that as the imputed age for ID #1.
+
+First, let's subset the data to only white females, excluding ID #1.
+
+**Standard R syntax:**
+```{r}
+sample_data_2[(sample_data_2$race=="white")&(sample_data_2$sex=="female")&(sample_data_2$id!=1),]
+```
+
+**Dplyr pipe:**
+```{r}
+sample_data_2 %>% filter((sex=="female")&(race=="white")&(id!=1))
+#or
+sample_data_2 %>% filter(race=="white") %>% filter(sex=="female") %>% filter(id!=1)
+```
+
+From here, it's easy to find the mean age of these women and then assign it to ID #1. Using the dplyr pipe, it's easier to build off the previous lines of code. Here are a few ways to do this:
+
+**Option 1: Dplyr pipe %>% with saved output to compute mean**
+
+```{r}
+white_females_1 <- sample_data_2 %>% filter(race=="white") %>% filter(sex=="female") %>% filter(id!=1)
+mean(white_females_1$age)
+```
+
+**Option 2: Dplyr pipe %>% with summarise() command to compute mean**
+```{r}
+sample_data_2 %>% filter(race=="white") %>% filter(sex=="female") %>% filter(id!=1) %>% summarise(mean(age))
+```
+
+**Option 3: Standard R syntax with saved output to compute mean**
+```{r}
+white_females_2 <- sample_data_2[(sample_data_2$race=="white")&(sample_data_2$sex=="female")&(sample_data_2$id!=1),]
+mean(white_females_2$age)
+```
+
+Regardless of the method you used, you now have determined the mean age of the other white females (i.e. excluding ID #1). We can now assign this mean age as the age for ID #1. 
+
+```{r}
+sample_data_2$age[sample_data_2$id==1] <- 72
+#or
+sample_data_2$age[sample_data_2$id==1] <- mean(white_females_2$age)
+#or
+head(sample_data_2) # see that the first 6 observations are all id==1
+
+sample_data_2$age[1:6] <- mean(white_females_2$age)
+```
+
+Did it work? Check the data:
+```{r}
+head(sample_data_2,6)
+```
+
+###1d. Formatting dates
+We can inspect the data format of each variable in our data using the str()command.
+
+```{r}
+str(sample_data_2) 
+```
+
+We see that dates (3 different variables) are formatted as a factor, but we'd rather see them in R’s "date" format. This allows us to do many things in R, including intelligently subtract dates. The as.Date command can convert our variables to the “date” format for us, but we need to specify the format of our input dates. Note that %Y indicates a 4-digit year, while %y indicates a 2-digit year.  %m is month, and %d is day. Be sure to specify the proper order as well as the separator, usually **/** or **-**.
+
+```{r}
+sample_data_2$visit_date <- as.Date(sample_data_2$visit_date, "%m/%d/%Y")
+sample_data_2$back_pain_date <- as.Date(sample_data_2$back_pain_date, "%m/%d/%Y")
+```
+
+However, let’s take a look at the variable gi_bleed_date:
+
+```{r}
+sample_data_2$gi_bleed_date
+```
+
+Notice anything? The dates are formatted in two different styles: YYYY-MM-DD and MM/DD/YYYY. Unfortunately, this means that converting the gi_bleed_date variable into an as.Date format will require a few steps.
+
+First, we will create two new columns in order to parse and save the 2 different date formats as R’s as.Date. 
+
+```{r}
+sample_data_2$gi_bleed_date_1 <- as.Date(sample_data_2$gi_bleed_date, "%m/%d/%Y")
+sample_data_2$gi_bleed_date_2 <- as.Date(sample_data_2$gi_bleed_date, "%Y-%m-%d")
+```
+
+Then, we will create a new column called gi_bleed_date_clean, which will add all of the date-converted MM/DD/YYYY dates to the dataset first (from the column gi_bleed_date_1), and THEN add all of the date-converted YYYY-MM-DD dates to the dataset. 
+
+```{r}
+sample_data_2$gi_bleed_date_clean[!is.na(sample_data_2$gi_bleed_date_1)] <- as.character(sample_data_2$gi_bleed_date_1[!is.na(sample_data_2$gi_bleed_date_1)])
+
+sample_data_2$gi_bleed_date_clean[!is.na(sample_data_2$gi_bleed_date_2)] <- as.character(sample_data_2$gi_bleed_date_2[!is.na(sample_data_2$gi_bleed_date_2)])
+```
+
+We had to add the dates as characters, so we must finally convert all of the dates back to the proper Date format:
+
+```{r}
+sample_data_2$gi_bleed_date_clean <- as.Date(sample_data_2$gi_bleed_date_clean)
+```
+
+Let’s verify that what we have done worked:
+
+```{r}
+head(sample_data_2)
+```
+
+Great! Time to move to Part 2.
